@@ -16,8 +16,6 @@ rabtac [options] <input file>
 ```
 
 Your output will be written to ./out.asm, or ./out.o, or ./out, depending on your options.
-```
-```
 
 ### Arguments:
 ```
@@ -27,6 +25,3 @@ Your output will be written to ./out.asm, or ./out.o, or ./out, depending on you
 
 -a and -c are mutually exclusive
 ```
-```
-```
-
