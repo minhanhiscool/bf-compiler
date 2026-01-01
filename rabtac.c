@@ -99,6 +99,11 @@ int main(int argc, char *argv[]) {
       if (!tmp) {
         perror("Could not allocate IR buffer");
         free(ir_buf);
+        fclose(fp);
+        fclose(out);
+        if (remove("out.asm") != 0) {
+          perror("Could not remove output assembly");
+        }
         return 1;
       }
       ir_buf = tmp;
@@ -204,6 +209,13 @@ int main(int argc, char *argv[]) {
     case IR_LOOPL:
       if (stack_top + 1 >= MAX_SIZE) {
         fprintf(stderr, "Loops nesting too deep\n");
+        free(ir_buf);
+        fclose(fp);
+        fclose(out);
+        if (remove("out.asm") != 0) {
+          perror("Could not remove output assembly");
+        }
+        return 1;
       }
       loop_stack[++stack_top] = loop_cnt++;
       id = loop_stack[stack_top];
@@ -216,6 +228,12 @@ int main(int argc, char *argv[]) {
     case IR_LOOPR:
       if (stack_top < 0) {
         fprintf(stderr, "Unmatched loop\n");
+        free(ir_buf);
+        fclose(fp);
+        fclose(out);
+        if (remove("out.asm") != 0) {
+          perror("Could not remove output assembly");
+        }
         return 1;
       }
       id = loop_stack[stack_top--];
@@ -226,6 +244,12 @@ int main(int argc, char *argv[]) {
   }
   if (stack_top >= 0) {
     fprintf(stderr, "Unmatched loop\n");
+    free(ir_buf);
+    fclose(fp);
+    fclose(out);
+    if (remove("out.asm") != 0) {
+      perror("Could not remove output assembly");
+    }
     return 1;
   }
   free(ir_buf);
