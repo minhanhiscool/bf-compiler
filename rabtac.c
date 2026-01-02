@@ -343,7 +343,7 @@ int main(int argc, char *argv[]) {
                    "    lea rdi, [r12]\n"
                    "    repnz scasb\n"
                    "    cld\n"
-                   "    dec rdi\n"
+                   "    inc rdi\n"
                    "    mov r12, rdi\n"
                    " ");
       break;
