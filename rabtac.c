@@ -54,9 +54,11 @@ int main(int argc, char *argv[]) {
         } else if (strcmp(argv[i], "-O") == 0) {
           optimize = true;
         } else if (strcmp(argv[i], "-o") == 0) {
-          if (i < argc - 1) {
-            i++;
+          if (i >= argc - 1 || argv[i + 1][0] == '-') {
+            fprintf(stderr, "-o requires an argument\n");
+            return 1;
           }
+          i++;
           out_filename = argv[i];
         } else if (strcmp(argv[i], "-h") == 0) {
           fprintf(stdout,
@@ -113,13 +115,23 @@ int main(int argc, char *argv[]) {
                "_start:\n"
                "    mov rax, 9\n"
                "    mov rdi, 0\n"
-               "    mov rsi, 1099511627776\n"
+               "    mov rsi, 1610620928\n"
                "    mov rdx, 3\n"
-               "    mov r10, 0x22\n"
+               "    mov r10, 0x4022\n"
                "    mov r8, -1\n"
                "    mov r9, 0\n"
                "    syscall\n"
-               "    lea r12, [rax + 549755813888]\n\n");
+               "    mov r13, rax\n"
+               "    mov rax, 10\n"
+               "    mov rdi, r13\n"
+               "    mov rsi, 4096\n"
+               "    mov rdx, 0\n"
+               "    syscall\n"
+               "    mov rdi, r13\n"
+               "    add rdi, 1610616832\n"
+               "    syscall\n"
+               "    mov r12, r13\n"
+               "    add r12, 805310464\n");
 
   typedef enum {
     IR_ADD,
@@ -364,7 +376,7 @@ int main(int argc, char *argv[]) {
   fclose(out);
 
   if (assembly) {
-    if (rename("out.asm", filename)) {
+    if (rename("out.asm", out_filename)) {
       perror("Could not rename output assembly");
     }
     return 0;
@@ -378,7 +390,7 @@ int main(int argc, char *argv[]) {
   }
 
   if (object) {
-    if (rename("out.obj", filename)) {
+    if (rename("out.obj", out_filename)) {
       perror("Could not rename output object");
     }
     return 0;
@@ -391,7 +403,7 @@ int main(int argc, char *argv[]) {
     perror("Could not remove output object");
   }
 
-  if (rename("out.bin", filename)) {
+  if (rename("out.bin", out_filename)) {
     perror("Could not rename output binary");
   }
   return 0;
