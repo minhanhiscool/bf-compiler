@@ -21,7 +21,9 @@ Your output will be written to ./out.asm, or ./out.o, or ./out, depending on you
 ```
 -a: output assembly code only
 -c: output object files only
--o: optimize output
+-o <file>: specify output file (default: out)
+-O: optimize output
+-h: print help page
 
 -a and -c are mutually exclusive
 ```
