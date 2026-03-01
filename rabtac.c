@@ -5,6 +5,33 @@
 
 #define MAX_SIZE 2048
 
+int copy_file(const char *src, const char *dst) {
+  FILE *fsrc = fopen(src, "rb");
+  if (!fsrc)
+    return -1;
+
+  FILE *fdst = fopen(dst, "wb");
+  if (!fdst) {
+    fclose(fsrc);
+    return -1;
+  }
+
+  char buffer[4096];
+  size_t n;
+
+  while ((n = fread(buffer, 1, sizeof(buffer), fsrc)) > 0) {
+    if (fwrite(buffer, 1, n, fdst) != n) {
+      fclose(fsrc);
+      fclose(fdst);
+      return -1;
+    }
+  }
+
+  fclose(fsrc);
+  fclose(fdst);
+  return 0;
+}
+
 int main(int argc, char *argv[]) {
   bool assembly = false;
   bool object = false;
@@ -19,7 +46,7 @@ int main(int argc, char *argv[]) {
             "Options:\n"
             "-a: output only assembly code\n"
             "-c: output only object code\n"
-            "-o <file>: specify output (default: out)"
+            "-o <file>: specify output (default: out)\n"
             "-O: optimize code\n"
             "-h: output this help page\n",
             argv[0]);
@@ -66,7 +93,7 @@ int main(int argc, char *argv[]) {
                   "Options:\n"
                   "-a: output only assembly code\n"
                   "-c: output only object code\n"
-                  "-o <file>: output file name (default: out)"
+                  "-o <file>: output file name (default: out)\n"
                   "-O: optimize code\n"
                   "-h: output this help page\n",
                   argv[0]);
@@ -104,7 +131,9 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  FILE *out = fopen("out.asm", "w");
+  char tmp[] = "/tmp/asmXXXXXX";
+  int fd = mkstemp(tmp);
+  FILE *out = fopen(tmp, "w+");
   if (!out) {
     perror("Could not create output assembly");
     return 1;
@@ -127,6 +156,7 @@ int main(int argc, char *argv[]) {
                "    mov rsi, 4096\n"
                "    mov rdx, 0\n"
                "    syscall\n"
+               "    mov rax, 10\n"
                "    mov rdi, r13\n"
                "    add rdi, 1610616832\n"
                "    syscall\n"
@@ -271,7 +301,6 @@ int main(int argc, char *argv[]) {
 
   int id;
   for (int i = 0; i <= forward_ir_buf_idx; i++) {
-    fprintf(stderr, "%d %d\n", forward_ir_buf[i].id, forward_ir_buf[i].size);
     switch (forward_ir_buf[i].id) {
     case IR_ADD:
       fprintf(out, "    add byte [r12], %d\n", forward_ir_buf[i].size);
@@ -305,7 +334,7 @@ int main(int argc, char *argv[]) {
         free(ir_buf);
         fclose(fp);
         fclose(out);
-        if (remove("out.asm") != 0) {
+        if (remove(tmp) != 0) {
           perror("Could not remove output assembly");
         }
         return 1;
@@ -324,7 +353,7 @@ int main(int argc, char *argv[]) {
         free(ir_buf);
         fclose(fp);
         fclose(out);
-        if (remove("out.asm") != 0) {
+        if (remove(tmp) != 0) {
           perror("Could not remove output assembly");
         }
         return 1;
@@ -362,7 +391,7 @@ int main(int argc, char *argv[]) {
     free(ir_buf);
     fclose(fp);
     fclose(out);
-    if (remove("out.asm") != 0) {
+    if (remove(tmp) != 0) {
       perror("Could not remove output assembly");
     }
     return 1;
@@ -375,36 +404,36 @@ int main(int argc, char *argv[]) {
                "    syscall\n");
   fclose(out);
 
+  char cmd[1024];
+  char buf[1024];
+
   if (assembly) {
-    if (rename("out.asm", out_filename)) {
-      perror("Could not rename output assembly");
+    if (copy_file(tmp, out_filename)) {
+      perror("Could not copy output assembly");
     }
     return 0;
   }
-  if (system("nasm -f elf64 -o out.obj out.asm")) {
+  snprintf(cmd, sizeof(cmd), "nasm -f elf64 -o %s.o %s", tmp, tmp);
+  if (system(cmd)) {
     fprintf(stderr, "Could not compile assembly\n");
     return 1;
   }
-  if (remove("out.asm")) {
+  if (remove(tmp)) {
     perror("Could not remove out.asm");
   }
-
+  snprintf(buf, sizeof(buf), "%s.o", tmp);
   if (object) {
-    if (rename("out.obj", out_filename)) {
+    if (copy_file(tmp, out_filename)) {
       perror("Could not rename output object");
     }
     return 0;
   }
-
-  if (system("ld -o out.bin out.obj -s")) {
+  snprintf(cmd, sizeof(cmd), "ld %s.o -o %s -s", tmp, out_filename);
+  if (system(cmd)) {
     fprintf(stderr, "Could not link object file\n");
   }
-  if (remove("out.obj") != 0) {
+  if (remove(buf) != 0) {
     perror("Could not remove output object");
-  }
-
-  if (rename("out.bin", out_filename)) {
-    perror("Could not rename output binary");
   }
   return 0;
 }
